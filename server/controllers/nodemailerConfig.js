@@ -3,7 +3,7 @@ module.exports = {
     port: 587,
     secure: false, // true for 465, false for other ports
     auth: {
-        user: 'audie.kunde@ethereal.email',
-        pass: 'fyVWmUtB563CMhV1cN'
+        user: 'cade.kshlerin90@ethereal.email',
+        pass: 'gcQ4fH6rTjjrEaxpXx'
     },
 }
