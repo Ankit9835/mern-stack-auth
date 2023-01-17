@@ -1,10 +1,13 @@
 const User = require('../models/User')
-const jwt = require('jsonwebtoken')
+const newjwt = require('jsonwebtoken')
+const  { expressjwt: jwt }  = require('express-jwt');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const nodemailer = require('nodemailer');
 const nodemailerConfig = require('./nodemailerConfig');
 const sendEmail = require('./sendEmail');
+const { use } = require('../routes/auth');
+
 
 exports.signup = async (req,res) => {
     try{
@@ -15,7 +18,7 @@ exports.signup = async (req,res) => {
                     error:'Email already exists'
                 })
             }
-            const token = jwt.sign({name,email,password},  process.env.JWT_ACCOUNT_ACTIVATION, { expiresIn: '10m' })
+            const token = newjwt.sign({name,email,password},  process.env.JWT_ACCOUNT_ACTIVATION, { expiresIn: '10m' })
 
         //     const emailData = {
         //         from: process.env.EMAIL_FROM,
@@ -74,14 +77,14 @@ exports.accountActivation = async (req,res) => {
                 })
             }
 
-            const verify = jwt.verify(token, process.env.JWT_ACCOUNT_ACTIVATION)
+            const verify = newjwt.verify(token, process.env.JWT_ACCOUNT_ACTIVATION)
             if(!verify){
                 return res.status(404).json({
                     error:'Email link expired,please sign up again'
                 })
             }
            
-            const {name,email,password} = jwt.decode(token);
+            const {name,email,password} = newjwt.decode(token);
             console.log(name,email,password)
             const user = await User.create({name,email,password})
             if(user){
@@ -117,7 +120,7 @@ exports.login = (req, res) => {
             });
         }
         // generate a token and send to client
-        const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        const token = newjwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
         const { _id, name, email, role } = user;
 
         return res.json({
@@ -127,3 +130,107 @@ exports.login = (req, res) => {
         });
     });
 };
+
+exports.requireSignin = jwt({ secret:  process.env.JWT_SECRET, algorithms: ['HS256'] });
+
+exports.adminMiddleware = async (req,res,next) => {
+    try{
+        const user = await User.findById({_id:req.auth._id})
+        if(user.role != 'admin'){
+            return res.status(402).json({
+                message:'Access Unauthorized'
+            })
+        }
+        req.profile = user
+        next()
+    } catch(err){
+        return res.json({
+            error:err.message
+        })
+    }
+}
+
+exports.userForgotPassword = async (req,res) => {
+    try{
+        const {email} = req.body
+            if(!email){
+                res.status(402).json({
+                    error:`Please provide email`
+                })
+            }
+            const user = await User.findOne({email})
+            if(!user){
+                res.status(402).json({
+                    error:`This ${email} not found,please try again`
+                })
+            }   
+            const token = newjwt.sign({_id:user._id,name:user.name},  process.env.JWT_FORGOT_PASSWORD, { expiresIn: '2m' })
+            console.log(token)
+            user.resetPasswordLink = token
+            const resetPasswordLink = await user.save()
+            console.log(resetPasswordLink)
+            if(resetPasswordLink){
+                await sendEmail({
+                    to: email,
+                    subject: 'Reset Password Link',
+                    html: `
+                            <h1>Please use the following link to reset your password</h1>
+                            <p>${process.env.CLIENT_URL}/auth/reset-password/${token}</p>
+                            <hr />
+                            <p>This email may contain sensetive information</p>
+                            <p>${process.env.CLIENT_URL}</p>
+                        `
+                });
+                res.status(200).json({
+                    message:`Email has been sent to the ${email} user, please check the email for reseting the password`
+                })
+            }
+            
+    } catch(err){
+        return res.json({
+            error:err.message
+        })
+    }
+    
+}
+
+exports.userResetPassword = async (req,res) => {
+    try{
+        const {resetPasswordLink,newPassword} = req.body
+        console.log(resetPasswordLink)
+        if(!resetPasswordLink || !newPassword){
+            return res.status(402).json({
+                error:'All values will be filled'
+            })
+        }
+        const user = await User.findOne({resetPasswordLink})
+        console.log(user)
+        if(!user){
+            return res.status(402).json({
+                error:'User not found with the given password link'
+            })
+        }
+        const verify = newjwt.verify(resetPasswordLink, process.env.JWT_FORGOT_PASSWORD)
+        
+        if(verify){
+            user.password = newPassword
+            user.resetPasswordLink = ''
+            await user.save()
+            res.status(200).json({
+                message:'Great! Now you can login with your new password',
+        
+            })
+        } else {
+            return res.status(402).json({
+                error:'Link Expired,Try Again'
+            })
+        }
+    } catch(err){
+        return res.status(402).json({
+            error:err.message
+        })
+    }
+   
+   
+}
+

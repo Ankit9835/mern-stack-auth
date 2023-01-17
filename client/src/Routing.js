@@ -8,6 +8,8 @@ import Private from './core/Private'
 import ProtectedRoute from './auth/ProtectedRoute'
 import AdminRoute from './auth/AdminRoute'
 import Admin from './core/Admin'
+import Forgot from './auth/Forgot'
+import Reset from './auth/Reset'
 
 const Routing = () => {
   return (
@@ -19,6 +21,8 @@ const Routing = () => {
           <Route path='auth/activate/:token' element={<Activate />} />
           <Route path='private' element={<ProtectedRoute> <Private /> </ProtectedRoute>} />
           <Route path='admin' element={<AdminRoute> <Admin /> </AdminRoute>} />
+          <Route path='forgot-password' element={<Forgot />} />
+          <Route path='auth/reset-password/:resetPasswordLink' element={<Reset />} />
       </Routes>
   </BrowserRouter>
   )
