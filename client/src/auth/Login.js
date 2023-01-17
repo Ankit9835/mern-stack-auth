@@ -5,6 +5,8 @@ import axios from 'axios'
 import { ToastContainer, toast } from 'react-toastify';
 import { authenticate,isAuth } from './helpers';
 import 'react-toastify/dist/ReactToastify.css';
+import Google from './Google';
+
 
 
 const Login = () => {
@@ -19,6 +21,12 @@ const Login = () => {
 
     const handleChange = name => e => {
         setValues({...values, [name]:e.target.value})
+    }
+
+    const redirectToDashboard = (response) => {
+        authenticate(response, () => {
+            {isAuth() && isAuth().role === 'admin' ? navigate('/admin') : navigate('/') }
+        })
     }
 
     const clickSubmit = async (e) => {
@@ -68,6 +76,7 @@ const Login = () => {
         <div className='col-md-6 offset-md-3'>
         <ToastContainer />
         <h1 className='p-5 text-center'>Log In</h1>
+        <Google redirectToDashboard={redirectToDashboard}/>
         {signinForm()}
         </div>
     </Layout>
