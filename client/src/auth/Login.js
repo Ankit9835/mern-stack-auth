@@ -6,6 +6,8 @@ import { ToastContainer, toast } from 'react-toastify';
 import { authenticate,isAuth } from './helpers';
 import 'react-toastify/dist/ReactToastify.css';
 import Google from './Google';
+import Facebook from './Facebook';
+
 
 
 
@@ -76,7 +78,10 @@ const Login = () => {
         <div className='col-md-6 offset-md-3'>
         <ToastContainer />
         <h1 className='p-5 text-center'>Log In</h1>
-        <Google redirectToDashboard={redirectToDashboard}/>
+       <span className='display-inline'>
+       <Google redirectToDashboard={redirectToDashboard}/>
+        <Facebook />
+       </span> 
         {signinForm()}
         </div>
     </Layout>
